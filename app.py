@@ -7,12 +7,9 @@ from functools import wraps
 import os
 import pyaudio
 import wave
-import numpy as np
-from datetime import datetime
 import whisper
-import pyttsx3
+from datetime import datetime
 import threading
-import time
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///questions.db'
@@ -24,10 +21,12 @@ migrate = Migrate(app, db)
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 
+
 class Question(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     question = db.Column(db.String(500), nullable=False)
     category = db.Column(db.String(100), nullable=False)
+
 
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -35,9 +34,11 @@ class User(UserMixin, db.Model):
     password = db.Column(db.String(150), nullable=False)
     role = db.Column(db.String(50), nullable=False, default='user')
 
+
 @login_manager.user_loader
 def load_user(user_id):
     return db.session.get(User, int(user_id))
+
 
 def role_required(role):
     def decorator(f):
@@ -49,6 +50,7 @@ def role_required(role):
         return decorated_function
     return decorator
 
+
 class AudioRecorder:
     def __init__(self):
         self.chunk = 1024
@@ -57,8 +59,7 @@ class AudioRecorder:
         self.rate = 44100
         self.recording = False
         self.frames = []
-        self.model = whisper.load_model("base")  # Change model size if needed
-        self.engine = pyttsx3.init()
+        self.model = whisper.load_model("base")
 
     def start_recording(self):
         self.recording = True
@@ -100,17 +101,16 @@ class AudioRecorder:
 
     def transcribe_audio(self, audio_file):
         result = self.model.transcribe(audio_file)
-        return result['text']
+        return result["text"] if "text" in result else "Transcription failed"
 
-    def speak_response(self, text):
-        self.engine.say(text)
-        self.engine.runAndWait()
 
 recorder = AudioRecorder()
+
 
 @app.route('/')
 def hello():
     return jsonify({'message': 'Welcome to the AI-powered interview assistant!'})
+
 
 @app.route('/register', methods=['POST'])
 def register():
@@ -126,6 +126,7 @@ def register():
     db.session.commit()
     return jsonify({'message': 'User registered successfully'})
 
+
 @app.route('/login', methods=['POST'])
 def login():
     data = request.json
@@ -137,11 +138,13 @@ def login():
     login_user(user)
     return jsonify({'message': 'Logged in successfully'})
 
+
 @app.route('/logout', methods=['GET'])
 @login_required
 def logout():
     logout_user()
     return jsonify({'message': 'Logged out successfully'})
+
 
 @app.route('/add_question', methods=['POST'])
 @login_required
@@ -155,6 +158,7 @@ def add_question():
     db.session.commit()
     return jsonify({'message': 'Question added successfully'})
 
+
 @app.route('/get_questions', methods=['GET'])
 @login_required
 def get_questions():
@@ -167,6 +171,7 @@ def get_questions():
         } for question in questions]
     return jsonify(results)
 
+
 @app.route('/update_profile', methods=['PUT'])
 @login_required
 def update_profile():
@@ -178,6 +183,7 @@ def update_profile():
     db.session.commit()
     return jsonify({'message': 'Profile updated successfully'})
 
+
 @app.route('/reset_password', methods=['POST'])
 def reset_password():
     data = request.json
@@ -187,6 +193,7 @@ def reset_password():
     user.password = generate_password_hash(data['new_password'])
     db.session.commit()
     return jsonify({'message': 'Password reset successfully'})
+
 
 @app.route('/promote_user', methods=['POST'])
 @login_required
@@ -200,11 +207,13 @@ def promote_user():
     db.session.commit()
     return jsonify({'message': 'User promoted to admin successfully'})
 
+
 @app.route('/start_recording', methods=['POST'])
 @login_required
 def start_recording():
     recorder.start_recording()
     return jsonify({'message': 'Recording started'})
+
 
 @app.route('/stop_recording', methods=['POST'])
 @login_required
@@ -220,6 +229,7 @@ def stop_recording():
         })
     else:
         return jsonify({'message': 'No audio recorded'}), 400
+
 
 if __name__ == '__main__':
     app.run(debug=True)
